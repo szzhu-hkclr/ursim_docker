@@ -11,40 +11,63 @@ in which you can control the robot remotely.
 There are two different versions of the simulator an e-series robot and a CB3
 robot. There is an image for both CB3 and e-series.
 
-You can find the image on [Docker Hub](https://hub.docker.com/repository/docker/mahp2502/ursim_docker/general)
-(currently not public).
+You can find pre-buit cb3 image on [ursim_cb3](https://hub.docker.com/r/universalrobots/ursim_cb3).
 
-**Disclaimer** The docker image is primarily created to be used inside test pipelines
-on GitHub. It can also be used as an alternative to the virtual machine solution
-however there is no guaranties that the docker image will work as expected.
+And e-series image on [ursim_e-series](https://hub.docker.com/r/universalrobots/ursim_e-series).
 
-## How to use this image
+**Disclaimer** The purpose for the docker image is to facilitate and improve the access of the simulator.
 
-First you should go ahead and pull the docker image of the version you want to use.
-For that the following command can be used (image is currently not public).
+The docker image is created by UR Labs. It is not yet apart of the official release.
 
-```bash
-docker pull mahp2502/ursim_docker:tagname
+# Why using URSim to provide a fake robot
+
+Ever since ur_rtde is used, URFakeDriver is no longer real enough to fake the robot (i.e. cannot provide speedL/servoJ etc). Instead we can use URSim.
+
+## How to use this image with [ur_rtde_node](https://github.com/HKCLR2021/ur_rtde_node)
+
+#### Prerequisite: Installing Oracle HotSpot JRE
+Follow https://ubuntu.com/tutorials/install-jre#3-installing-oracle-hotspot-jre
+
+#### Make docker image
+Follow https://github.com/szzhu-hkclr/ursim_docker
+
+i.e. clone repo, `cd ursim_docker`, then
+
+For old CB3 models (eg UR5)
 ```
-
-You can also build the image with the following command:
-
-```bash
-docker build ursim/e-series -t myursim --build-arg VERSION=5.11.1.108318 --build-arg URSIM="https://s3-eu-west-1.amazonaws.com/ur-support-site/118926/URSim_Linux-5.11.1.108318.tar.gz"
+docker build ursim/cb3 -t ursim_cb3 --build-arg VERSION=3.15.8.106339 --build-arg URSIM="https://s3-eu-west-1.amazonaws.com/ur-support-site/172182/URSim_Linux-3.15.8.106339.tar.gz"
 ```
-
-When the image has been pulled/build you can go ahead and run the image with the
-following command.
-
-```bash
-docker run --rm -it -p 5900:5900 -p 29999:29999 -p 30001-30004:30001-30004 myursim
+OR for e-series (eg UR5e)
 ```
+docker build ursim/e-series -t myursim_eseries --build-arg VERSION=5.12.4.1101661 --build-arg URSIM="https://s3-eu-west-1.amazonaws.com/ur-support-site/174207/URSim_Linux-5.12.4.1101661.tar.gz"
+```
+#### Spin up container
+For old CB3 models (eg UR5)\
+`docker run --rm -it -p 5900:5900 -p 29999:29999 -p 30001-30004:30001-30004 ursim_cb3`
 
+OR for e-series (eg UR5e)\
+`docker run --rm -it -p 5900:5900 -p 29999:29999 -p 30001-30004:30001-30004 ursim_eseries`
+
+Now the robot is up but not in working state, you still need to click the init robot button via GUI at the next VNC step.
+
+#### VNC to access UR5's GUI
 Now you can use a VNC application to view the robots GUI, by connecting to localhost:5900.
 And you will have a fully functional simulator which can be used inside applications
 or testing pipelines.
 
-This is just a quick example on how to get you started.
+install a VNC viewer eg:
+
+`sudo apt-get install tigervnc-viewer`
+
+connect to `0.0.0.0:5900`:
+
+`vncviewer 0.0.0.0:5900`
+
+#### Run rtde node and moveit server for controlling robot
+`ros2 run ur_rtde_node URNodeTester --ros-args -p fake:=false -p simTimeScale:=1.0 -p ip:="0.0.0.0"`
+
+`ros2 launch ur5_moveit_config ur5_moveit.launch.py launch_rviz:=true`
+
 
 ## Parameters
 
@@ -54,7 +77,7 @@ can be seen below.
 | Parameter                | Description |
 | ---                      | ---                                                                                                                            |
 | `-e ROBOT_MODEL=UR5`     | Specify robot model to simulate. Valid options are UR3, UR5 and UR10. Defaults to UR5.                                         |
-| `-e TZ=Europe/Copenhagen`| Specify a timezone to use. Defaults to Europe/Copenhagen.                                                                      |
+| `-e TZ=Asia/Hong_Kong`   | Specify a timezone to use. Defaults to Asia/Hong_Kong.                                                                      |
 | `-p 5900`                | Allows VNC access to the robots interface.                                                                                     |
 | `-p 502`                 | Allows access to Universal Robots Modbus port.                                                                                 |
 | `-p 29999`               | Allows access to Universal Robots dashboard server interface port.                                                             |
@@ -73,7 +96,7 @@ For example, if one wants to save the programs in a `~/programs` folder we
 can simply launch the container with an additional volume argument:
 
 ```bash
-docker run --rm -it -p 5900:5900 -v "${HOME}/programs:/ursim/programs" myursim
+docker run --rm -it -p 5900:5900 -v "${HOME}/programs:/ursim/programs" ursim_cb3
 ```
 
 ## URCaps
@@ -107,7 +130,7 @@ section](#programs) and then copy the URCap to that folder.
 Now we can start the simulator.
 
 ```bash
-docker run --rm -it --mount source=ursim-gui-cache,target=/ursim/GUI --mount source=urcap-build-cache,target=/ursim/.urcaps -p 5900:5900 -v "${HOME}/programs:/ursim/programs" myursim_eseries
+docker run --rm -it --mount source=ursim-gui-cache,target=/ursim/GUI --mount source=urcap-build-cache,target=/ursim/.urcaps -p 5900:5900 -v "${HOME}/programs:/ursim/programs" ursim_cb3
 ```
 
 Now use a VNC application to view the robots GUI, by connecting to localhost:5900.
@@ -171,7 +194,7 @@ section](#programs) and then copy the URCap to that folder.
 Now we can start the simulator.
 
 ```bash
-docker run --rm -it --mount source=ursim-gui-cache,target=/ursim/GUI --mount source=urcap-build-cache,target=/ursim/.urcaps -p 5900:5900 -v "${HOME}/programs:/ursim/programs" myursim_cb3
+docker run --rm -it --mount source=ursim-gui-cache,target=/ursim/GUI --mount source=urcap-build-cache,target=/ursim/.urcaps -p 5900:5900 -v "${HOME}/programs:/ursim/programs" ursim_cb3
 ```
 
 Now use a VNC application to view the robots GUI, by connecting to localhost:5900.
@@ -222,7 +245,7 @@ For example, if one has a folder called `~/urcaps` the container could simply be
 launched with the following command:
 
 ```bash
-docker run --rm -it -p 5900:5900 -v "${HOME}/urcaps:/urcaps" myursim
+docker run --rm -it -p 5900:5900 -v "${HOME}/urcaps:/urcaps" ursim_cb3
 ```
 
 This will install the URCap when running the container and without having to restart
