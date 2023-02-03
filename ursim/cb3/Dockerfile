@@ -30,7 +30,7 @@ LABEL build_version="URSim Version: ${VERSION}"
 LABEL description="UR simulator cb series"
 
 # Set Timezone
-ENV TZ "Europe/Copenhagen"
+ENV TZ=Asia/Hong_Kong
 
 # Set Home Directory
 ENV HOME /ursim
